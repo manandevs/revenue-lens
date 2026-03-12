@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+list-files.cjs
+all_files.txt
+src/components/Signin.jsx

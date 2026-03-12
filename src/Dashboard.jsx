@@ -2,39 +2,64 @@ import { useState, useEffect } from "react";
 import "./styles/dashboard.scss";
 import supabase from "./supabase-client";
 import { BarChart } from "@mui/x-charts";
+import Form from "./components/Form";
 
 function Dashboard() {
   const [data, setData] = useState([]);
 
-  async function fetchMetrics() {
-    const { data, error } = await supabase
-      .from("sales_deals")
-      .select("name, value")
-      .order("value", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching deals:", error);
-    } else {
-      setData(data);
-    }
-  }
-
   useEffect(() => {
+    let isMounted = true;
+
+    async function fetchMetrics() {
+      const { data, error } = await supabase
+        .from("sales_deals")
+        .select("id, name, value")
+        .order("value", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error(error);
+      } else {
+        setData(data);
+      }
+    }
+
     fetchMetrics();
+
+    const channel = supabase
+      .channel("deals_channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sales_deals",
+        },
+        (payload) => {
+          console.log("Realtime change:", payload);
+
+          fetchMetrics();
+        }
+      )
+      .subscribe();
+
+    // single cleanup
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // const aggregatedData = data.reduce((acc, curr) => {
-  //   acc[curr.name] = (acc[curr.name] || 0) + curr.value
-  //   return acc
-  // }, {})
-  // console.log(aggregatedData)
+  const aggregatedData = data.reduce((acc, curr) => {
+    acc[curr.name] = (acc[curr.name] || 0) + curr.value;
+    return acc;
+  }, {})
 
-  // const names = Object.keys(aggregatedData)
-  // const values = Object.values(aggregatedData)
-
-  const names = data.map(item => item.name)
-  const values = data.map(item => item.value)
-  console.log(names, values)
+  const names = Object.keys(aggregatedData)
+  const values = Object.values(aggregatedData)
+  // const names = data.map(item => item.name)
+  // const values = data.map(item => item.value)
 
   return (
     <div className="dashboard">
@@ -64,6 +89,7 @@ function Dashboard() {
         ) : (
           <p>Loading chart...</p>
         )}
+        <Form deals={data} />
       </div>
     </div>
   );
