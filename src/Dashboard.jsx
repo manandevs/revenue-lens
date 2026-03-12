@@ -3,6 +3,7 @@ import "./styles/dashboard.scss";
 import supabase from "./supabase-client";
 import { BarChart } from "@mui/x-charts";
 import Form from "./components/Form";
+import { useAuth } from "./context/AuthContext";
 
 function Dashboard() {
   const [data, setData] = useState([]);
@@ -61,6 +62,8 @@ function Dashboard() {
   // const names = data.map(item => item.name)
   // const values = data.map(item => item.value)
 
+  const { session } = useAuth()
+  console.log(session)
   return (
     <div className="dashboard">
       <h1>RevenueLens Dashboard</h1>
